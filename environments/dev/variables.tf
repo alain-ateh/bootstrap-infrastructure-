@@ -1,6 +1,13 @@
-variable "environment" {
-  description = "Environment name (dev/prod)"
+variable "aws_region" {
+  description = "AWS region"
   type        = string
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
 }
 
 variable "ami_id" {
@@ -19,6 +26,18 @@ variable "key_name" {
   type        = string
 }
 
+variable "artifacts_bucket_name" {
+  description = "S3 bucket name for build artifacts"
+  type        = string
+  default     = "jenkins-build-artifacts"
+}
+
+variable "dynamodb_table_name" {
+  description = "DynamoDB table name"
+  type        = string
+  default     = "application-data"
+}
+
 variable "allowed_ssh_cidr" {
   description = "CIDR blocks allowed for SSH access"
   type        = list(string)
@@ -26,18 +45,7 @@ variable "allowed_ssh_cidr" {
 }
 
 variable "allowed_jenkins_cidr" {
-  description = "CIDR blocks allowed for Jenkins web access"
+  description = "CIDR blocks allowed for Jenkins access"
   type        = list(string)
   default     = ["0.0.0.0/0"]
-}
-
-variable "root_volume_size" {
-  description = "Size of root volume in GB"
-  type        = number
-  default     = 30
-}
-
-variable "artifacts_bucket_arn" {
-  description = "ARN of S3 bucket for build artifacts"
-  type        = string
 }
