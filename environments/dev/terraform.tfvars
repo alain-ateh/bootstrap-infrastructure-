@@ -1,4 +1,4 @@
-aws_region    = "us-east-1"
+aws_region    = "us-east-2"
 environment   = "dev"
 ami_id        = "ami-0c55b159cbfafe1d0"  # Amazon Linux 2
 instance_type = "t3.medium"
