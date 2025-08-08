@@ -22,6 +22,14 @@ resource "aws_s3_bucket" "terraform_state" {
     Environment = "shared"
     Purpose     = "terraform-backend"
   }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -31,16 +39,9 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   }
 }
 
-resource "aws_s3_bucket_encryption" "terraform_state" {
+resource "aws_s3_bucket_acl" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
@@ -54,9 +55,9 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
 
 # DynamoDB table for state locking
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = var.dynamodb_table_name
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = var.dynamodb_table_name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"
@@ -70,6 +71,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
+# Variables
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -87,6 +89,7 @@ variable "dynamodb_table_name" {
   default     = "terraform-state-locks"
 }
 
+# Outputs
 output "s3_bucket_name" {
   description = "Name of the created S3 bucket"
   value       = aws_s3_bucket.terraform_state.bucket
