@@ -1,5 +1,12 @@
 terraform {
-  required_version = ">= 1.0"
+  backend "s3" {
+    bucket         = "terraform-state-bucket"
+    key            = "dev/terraform.tfstate"
+    region         = "us-east-2"
+    dynamodb_table = "terraform-state-locks"
+    encrypt        = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -11,15 +18,19 @@ terraform {
 provider "aws" {
   region = var.aws_region
 }
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-2"
+}
 
-# S3 bucket for Terraform state
-resource "aws_s3_bucket" "terraform_state" {
-  bucket        = var.state_bucket_name
-  force_destroy = false
+# S3 Bucket for Terraform State
+resource "aws_s3_bucket" "terraform_state_bucket" {
+  bucket = "terraform-state-bucket"
 
   tags = {
     Name        = "Terraform State Bucket"
-    Environment = "shared"
+    Environment = "dev"
     Purpose     = "terraform-backend"
   }
 
@@ -32,32 +43,32 @@ resource "aws_s3_bucket" "terraform_state" {
   }
 }
 
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
+
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_acl" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+resource "aws_s3_bucket_acl" "terraform_state_acl" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
   acl    = "private"
 }
 
-resource "aws_s3_bucket_public_access_block" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+resource "aws_s3_bucket_public_access_block" "terraform_state_block" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
 
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-# DynamoDB table for state locking
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = var.dynamodb_table_name
+resource "aws_dynamodb_table" "terraform_state_locks" {
+  name         = "terraform-state-locks"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
+
+  hash_key = "LockID"
 
   attribute {
     name = "LockID"
@@ -65,37 +76,8 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 
   tags = {
-    Name        = "Terraform State Lock Table"
-    Environment = "shared"
-    Purpose     = "terraform-backend"
+    Name        = "Terraform State Locks"
+    Environment = "dev"
+    Purpose     = "terraform-locks"
   }
-}
-
-# Variables
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "state_bucket_name" {
-  description = "Name of the S3 bucket for Terraform state"
-  type        = string
-}
-
-variable "dynamodb_table_name" {
-  description = "Name of the DynamoDB table for state locking"
-  type        = string
-  default     = "terraform-state-locks"
-}
-
-# Outputs
-output "s3_bucket_name" {
-  description = "Name of the created S3 bucket"
-  value       = aws_s3_bucket.terraform_state.bucket
-}
-
-output "dynamodb_table_name" {
-  description = "Name of the created DynamoDB table"
-  value       = aws_dynamodb_table.terraform_locks.name
 }
